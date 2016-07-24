@@ -80,7 +80,7 @@ L.Control.MatrixLayers = L.Control.Layers.extend({
 		this._handlingClick = true;
 
 		//get the inputs in each div and see which are ticked, to get a list of the selected dimension elements
-		var divs = this._form.getElementsByTagName('div');
+		var divs = this._overlaysList.getElementsByTagName('div');
 		var checkedDimensions = {};
 		for (var i = 0; i < divs.length; i++) {
 			var div = divs[i];
