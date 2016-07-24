@@ -33,4 +33,4 @@ var overlays = {
 	"riversideBuildings": riversideBuildings
 };
 
-L.control.layers(baseLayers, overlays).addTo(map);
+L.control.matrixLayers(baseLayers, overlays).addTo(map);
