@@ -26,11 +26,10 @@ var baseLayers = {
 	"Streets": streets
 };
 
-var overlays = {
-	"urbanParks": urbanParks,
-	"urbanBuildings": urbanBuildings,
-	"riversideParks": riversideParks,
-	"riversideBuildings": riversideBuildings
-};
+var control = L.control.matrixLayers(baseLayers, null);
+control.addTo(map);
 
-L.control.matrixLayers(baseLayers, overlays).addTo(map);
+control.addMatrixOverlay(urbanParks, 'Urban/Parks');
+control.addMatrixOverlay(urbanBuildings, 'Urban/Buildings');
+control.addMatrixOverlay(riversideParks, 'Riverside/Parks');
+control.addMatrixOverlay(riversideBuildings, 'Riverside/Buildings');
