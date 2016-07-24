@@ -61,52 +61,61 @@ L.Control.MatrixLayers = L.Control.Layers.extend({
 	},
 	
 	
-	_onMatrixInputClick: function () {
+	_onMatrixInputClick: function (e) {
 		this._handlingClick = true;
-		
-		//get the inputs in each div and see which are ticked, to get a list of the selected dimension elements
-		var divs = this._form.getElementsByTagName('div');
-		var checkedDimensions = {};
-		for (var i = 0; i < divs.length; i++) {
-			var div = divs[i];
-			var dimension = div.dimensionName;
-			var inputs = div.getElementsByTagName('input');
-			if (checkedDimensions[dimension] == undefined) {
-				checkedDimensions[dimension] = new Array();
-			}
-			for (var j = 0; j < inputs.length; j++) {
-				var input = inputs[j];
-				if (input.checked) {
-					checkedDimensions[dimension].push(input.dimensionId);
+
+		var labelElement = e.currentTarget.parentElement;
+		this._addLoadingIndicator(labelElement, function() {
+			
+			//reset - onInputClick might have got there before us
+			this._handlingClick = true;
+
+			//get the inputs in each div and see which are ticked, to get a list of the selected dimension elements
+			var divs = this._form.getElementsByTagName('div');
+			var checkedDimensions = {};
+			for (var i = 0; i < divs.length; i++) {
+				var div = divs[i];
+				var dimension = div.dimensionName;
+				var inputs = div.getElementsByTagName('input');
+				if (checkedDimensions[dimension] == undefined) {
+					checkedDimensions[dimension] = new Array();
+				}
+				for (var j = 0; j < inputs.length; j++) {
+					var input = inputs[j];
+					if (input.checked) {
+						checkedDimensions[dimension].push(input.dimensionId);
+					}
 				}
 			}
-		}
-		//map the group dimension names to an ordering
-		var orderedDimensionElements = new Array();
-		for (var i = 0; i < this.options.dimensionNames.length; i++) {
-			var dimensionName = this.options.dimensionNames[i];
-			var dimensionElements = checkedDimensions[dimensionName];
-			orderedDimensionElements.push(dimensionElements);
-		}
-		//iterate to construct a list of selected layers
-		var selectedLayerNames = {};
-		this._depthFirstIteration(orderedDimensionElements, 0, "", function(path){
-			selectedLayerNames[path] = true;
-		});
-		//now add or remove the layers from the map
-		Object.keys(this._matrixLayers).forEach(function (layerName) {
-			var layer = this._matrixLayers[layerName];
-			if (layerName in selectedLayerNames && !this._map.hasLayer(layer)) {
-				this._map.addLayer(layer);
-
-			} else if (!(layerName in selectedLayerNames) && this._map.hasLayer(layer)) {
-				this._map.removeLayer(layer);
+			//map the group dimension names to an ordering
+			var orderedDimensionElements = new Array();
+			for (var i = 0; i < this.options.dimensionNames.length; i++) {
+				var dimensionName = this.options.dimensionNames[i];
+				var dimensionElements = checkedDimensions[dimensionName];
+				orderedDimensionElements.push(dimensionElements);
 			}
-		}, this);
+			//iterate to construct a list of selected layers
+			var selectedLayerNames = {};
+			this._depthFirstIteration(orderedDimensionElements, 0, "", function(path){
+				selectedLayerNames[path] = true;
+			});
+			//now add or remove the layers from the map
+			Object.keys(this._matrixLayers).forEach(function (layerName) {
+				var layer = this._matrixLayers[layerName];
+				if (layerName in selectedLayerNames && !this._map.hasLayer(layer)) {
+					this._map.addLayer(layer);
 
-		this._handlingClick = false;
+				} else if (!(layerName in selectedLayerNames) && this._map.hasLayer(layer)) {
+					this._map.removeLayer(layer);
+				}
+			}, this);
 
-		this._refocusOnMap();
+			this._removeLoadingIndicator(labelElement);
+
+			this._handlingClick = false;
+
+			this._refocusOnMap();
+		}.bind(this));
 	},
 	
 	_depthFirstIteration: function (dimensions, dimensionIndex, parentPath, found) {
@@ -150,7 +159,7 @@ L.Control.MatrixLayers = L.Control.Layers.extend({
 		return label;
 	},
 
-	//we have to override this to stop it finding out inputs and then struggling to find layers for them
+	//we have to override this to stop it finding our inputs and then struggling to find layers for them
 	_onInputClick: function () {
 		var i, input, obj,
 		    inputs = this._form.getElementsByTagName('input'),
@@ -176,6 +185,19 @@ L.Control.MatrixLayers = L.Control.Layers.extend({
 
 		this._refocusOnMap();
 	},
+
+	_addLoadingIndicator: function (labelElement, callback) {
+		var img = document.createElement('img');
+		img.src = 'loading.gif';
+		img.class = 'loading-image';
+		img.onload = callback;
+		labelElement.appendChild(img);
+	},
+
+	_removeLoadingIndicator: function (labelElement) {
+		var img = labelElement.getElementsByTagName('img')[0];
+		labelElement.removeChild(img);
+	}
 
 });
 
