@@ -26,7 +26,7 @@ var baseLayers = {
 	"Streets": streets
 };
 
-var control = L.control.matrixLayers(baseLayers, null, {dimensionNames: ['Locality', 'Type']});
+var control = L.control.matrixLayers(baseLayers, null, {dimensionNames: ['Locality', 'Type'], loadingImage: 'loading.gif'});
 control.addTo(map);
 
 control.addMatrixOverlay(urbanParks, 'Urban/Parks');
