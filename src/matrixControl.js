@@ -1,4 +1,4 @@
-L.Control.MatrixLayers = L.Control.Layers.extend({	
+L.Control.MatrixLayers = L.Control.Layers.extend({
 	_update: function () {
 		//much borrowed from https://github.com/Leaflet/Leaflet/blob/59a8c00a1850103f4fba8561961282eb21b29e7d/src/control/Control.Layers.js#L132
 		if (!this._container) {
@@ -36,7 +36,7 @@ L.Control.MatrixLayers = L.Control.Layers.extend({
 
 		//now create the UI for all dimensions
 		for (var i = 0; i < allDimensions.length; i++) {
-			var dimensionName = i;//TODO
+			var dimensionName = this.options.dimensionNames[i];
 			var dimension = allDimensions[i];
 			var parentElement = document.createElement('div');
 			parentElement.style = 'display: block';
@@ -62,9 +62,6 @@ L.Control.MatrixLayers = L.Control.Layers.extend({
 	
 	
 	_onMatrixInputClick: function () {
-		//TEMP:
-		this._dimensionNames = [0, 1];
-
 		this._handlingClick = true;
 		
 		//get the inputs in each div and see which are ticked, to get a list of the selected dimension elements
@@ -86,8 +83,8 @@ L.Control.MatrixLayers = L.Control.Layers.extend({
 		}
 		//map the group dimension names to an ordering
 		var orderedDimensionElements = new Array();
-		for (var i = 0; i < this._dimensionNames.length; i++) {
-			var dimensionName = this._dimensionNames[i];
+		for (var i = 0; i < this.options.dimensionNames.length; i++) {
+			var dimensionName = this.options.dimensionNames[i];
 			var dimensionElements = checkedDimensions[dimensionName];
 			orderedDimensionElements.push(dimensionElements);
 		}
