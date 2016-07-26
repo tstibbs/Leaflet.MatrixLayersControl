@@ -12,8 +12,8 @@ L.marker([51.530535, -0.153362]).addTo(urbanParks);
 L.marker([51.500784, -0.143052]).addTo(urbanBuildings);
 L.marker([51.497770, -0.101477]).addTo(urbanBuildings);
 
-var streets = L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
-	attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+var streets = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+	attribution: '&copy; <a href="https://osm.org/copyright">OpenStreetMap</a> contributors'
 });
 
 var map = L.map('map', {
