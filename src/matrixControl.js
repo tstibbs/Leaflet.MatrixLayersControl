@@ -1,4 +1,21 @@
 L.Control.MatrixLayers = L.Control.Layers.extend({
+
+	initialize: function (baseLayers, overlays, matrixOverlays, options) {
+		L.Control.Layers.prototype.initialize.call(this, baseLayers, overlays, options);
+
+		for (layerName in matrixOverlays) {
+			this._addMatrixOverlay(matrixOverlays[layerName], layerName);
+		}
+	},
+
+	onAdd: function (map) {
+		var container = L.Control.Layers.prototype.onAdd.call(this, map);
+		
+		this._updateSelectedLayers();
+
+		return container;
+	},
+
 	_update: function () {
 		//much borrowed from https://github.com/Leaflet/Leaflet/blob/59a8c00a1850103f4fba8561961282eb21b29e7d/src/control/Control.Layers.js#L132
 		if (!this._container) {
@@ -52,13 +69,12 @@ L.Control.MatrixLayers = L.Control.Layers.extend({
 
 
 
-	addMatrixOverlay: function (layer, name) {
+	_addMatrixOverlay: function (layer, name) {
 		if (this._matrixLayers == undefined) {
 			this._matrixLayers = {};
 		}
 		this._matrixLayers[name] = layer;
 		this.addOverlay(layer, name);
-		this._updateSelectedLayers();//local storage may have affected which checkboxes were ticked, so we need to update which layers are shown
 	},
 	
 	
@@ -230,6 +246,6 @@ L.Control.MatrixLayers = L.Control.Layers.extend({
 
 });
 
-L.control.matrixLayers = function (baseLayers, overlays, options) {
-	return new L.Control.MatrixLayers(baseLayers, overlays, options);
+L.control.matrixLayers = function (baseLayers, overlays, matrixOverlays, options) {
+	return new L.Control.MatrixLayers(baseLayers, overlays, matrixOverlays, options);
 };

@@ -26,10 +26,17 @@ var baseLayers = {
 	"Streets": streets
 };
 
-var control = L.control.matrixLayers(baseLayers, null, {dimensionNames: ['Locality', 'Type'], loadingImage: 'loading.gif'});
+var matrixLayers = {
+	'Urban/Parks': urbanParks,
+	'Urban/Buildings': urbanBuildings,
+	'Riverside/Parks': riversideParks,
+	'Riverside/Buildings': riversideBuildings
+};
+var options = {
+	dimensionNames: ['Locality', 'Type'],
+	loadingImage: 'loading.gif'
+};
+var control = L.control.matrixLayers(baseLayers, null, matrixLayers, options);
 control.addTo(map);
 
-control.addMatrixOverlay(urbanParks, 'Urban/Parks');
-control.addMatrixOverlay(urbanBuildings, 'Urban/Buildings');
-control.addMatrixOverlay(riversideParks, 'Riverside/Parks');
-control.addMatrixOverlay(riversideBuildings, 'Riverside/Buildings');
+
