@@ -226,13 +226,13 @@ L.Control.MatrixLayers = L.Control.Layers.extend({
 	},
 	
 	_saveSelectionState: function(dimensionName, dimensionValue, selected) {
-		if (typeof(Storage) !== "undefined") {
+		if (localStorage !== undefined) {
 			localStorage.setItem('matrix_layers_control:' + dimensionName + '/' + dimensionValue, selected.toString());
 		}
 	},
 	
 	_getSelectionState: function(dimensionName, dimensionValue) {
-		if (typeof(Storage) !== "undefined") {
+		if (localStorage !== undefined) {
 			var selected = localStorage.getItem('matrix_layers_control:' + dimensionName + '/' + dimensionValue);
 			if (selected == null) {
 				return true;//default to being selected
