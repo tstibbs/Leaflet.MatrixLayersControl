@@ -56,9 +56,36 @@ L.Control.MatrixLayers = L.Control.Layers.extend({
 			var dimensionName = this.options.dimensionNames[i];
 			var dimension = allDimensions[i];
 			var parentElement = document.createElement('div');
-			parentElement.style = 'display: block';
-			parentElement.innerHTML = '<p>' + dimensionName + '</p>';
+			parentElement.className = 'dimension-container';
 			parentElement.dimensionName = dimensionName;
+			
+			var dimensionEl = document.createElement('div');
+			dimensionEl.innerHTML = '<span>' + dimensionName + ' (<a href="#" class="check-all">all</a> / <a href="#" class="check-none">none</a>)</span>';
+			var context = this;
+			
+			function selectAll(parentElement, all) {
+				var checkboxes = parentElement.getElementsByTagName('input');
+				for (var i = 0; i < checkboxes.length; i++) {
+					checkboxes[i].checked = all;
+					context._saveSelectionState(checkboxes[i].dimensionName, checkboxes[i].dimensionValue, all);
+				}
+				context._updateLayerClick(parentElement);//once after updating all
+			}
+
+			var checkAllHref = dimensionEl.querySelector('a.check-all');
+			var checkNoneHref = dimensionEl.querySelector('a.check-none');
+			(function(parentElement) {//scoping
+				checkAllHref.onclick = function() {
+					selectAll(parentElement, true);
+					return false;
+				}
+				checkNoneHref.onclick = function() {
+					selectAll(parentElement, false);
+					return false;
+				}
+			})(parentElement);
+			parentElement.appendChild(dimensionEl);
+						
 			this._overlaysList.appendChild(parentElement);
 			Object.keys(dimension).forEach(function (dimensionValue) { 
 				this._addMatrixItem(parentElement, dimensionName, dimensionValue);
@@ -66,8 +93,6 @@ L.Control.MatrixLayers = L.Control.Layers.extend({
 		}
 
 	},
-
-
 
 	_addMatrixOverlay: function (layer, name) {
 		if (this._matrixLayers == undefined) {
@@ -84,6 +109,10 @@ L.Control.MatrixLayers = L.Control.Layers.extend({
 		var input = e.currentTarget;
 		this._saveSelectionState(input.dimensionName, input.dimensionValue, input.checked);
 		var labelElement = input.parentElement;
+		this._updateLayerClick(labelElement);
+	},
+
+	_updateLayerClick: function(labelElement) {
 		this._addLoadingIndicator(labelElement, function() {
 			this._updateSelectedLayers(function() {
 				this._removeLoadingIndicator(labelElement);
