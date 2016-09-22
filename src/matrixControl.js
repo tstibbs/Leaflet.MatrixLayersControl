@@ -59,8 +59,16 @@ L.Control.MatrixLayers = L.Control.Layers.extend({
 			parentElement.className = 'dimension-container';
 			parentElement.dimensionName = dimensionName;
 			
+			var dimensionDisplay = dimensionName;
+			if (this.options.dimensionLabels != null) {
+				var display = this.options.dimensionLabels[dimensionName];
+				if (display != null) {
+					dimensionDisplay = display;
+				}
+			}
+			
 			var dimensionEl = document.createElement('div');
-			dimensionEl.innerHTML = '<span>' + dimensionName + ' (<a href="#" class="check-all">all</a> / <a href="#" class="check-none">none</a>)</span>';
+			dimensionEl.innerHTML = '<span>' + dimensionDisplay + ' (<a href="#" class="check-all">all</a> / <a href="#" class="check-none">none</a>)</span>';
 			var context = this;
 			
 			function selectAll(parentElement, all) {
