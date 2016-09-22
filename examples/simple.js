@@ -33,13 +33,24 @@ var matrixLayers = {
 	'Riverside/Buildings': riversideBuildings
 };
 var options = {
-	dimensionNames: ['locality', 'type'],
-	dimensionLabels: {
-        locality: '<a href="https://en.wiktionary.org/wiki/locality">Locality</a>',
-        type: '<a href="https://en.wiktionary.org/wiki/type">Type</a>'
-	},
+	dimensionNames: ['Locality', 'Type']
 };
+
+if (window.addLinks) {
+	options.dimensionLabels = {
+		Locality: '<a href="https://en.wiktionary.org/wiki/locality">Locality</a>',
+		Type: '<a href="https://en.wiktionary.org/wiki/type">Type</a>'
+	};
+	options.dimensionValueLabels = {
+		Locality: {
+			Urban: '<a href="https://en.wiktionary.org/wiki/urban">Urban</a>',
+			Riverside: '<a href="https://en.wiktionary.org/wiki/riverside">Riverside</a>'
+		},
+		Type: {
+			Parks: '<a href="https://en.wiktionary.org/wiki/parks">Parks</a>',
+			Buildings: '<a href="https://en.wiktionary.org/wiki/buildings">Buildings</a>'
+		}
+	};
+}
 var control = L.control.matrixLayers(baseLayers, null, matrixLayers, options);
 control.addTo(map);
-
-

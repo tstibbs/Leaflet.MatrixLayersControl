@@ -214,11 +214,15 @@ L.Control.MatrixLayers = L.Control.Layers.extend({
 
 		L.DomEvent.on(input, 'click', this._onMatrixInputClick, this);
 
-		var name = document.createElement('span');
-		name.innerHTML = ' ' + dimensionValue;
+		var displayString = dimensionValue;
+		if (this.options.dimensionValueLabels != null && this.options.dimensionValueLabels[dimensionName] != null && this.options.dimensionValueLabels[dimensionName][dimensionValue] != null) {
+			displayString = this.options.dimensionValueLabels[dimensionName][dimensionValue];
+		}
+		var display = document.createElement('span');
+		display.innerHTML = ' ' + displayString;
 
 		label.appendChild(input);
-		label.appendChild(name);
+		label.appendChild(display);
 
 		parentElement.appendChild(label);
 
