@@ -7,3 +7,7 @@ div.dimension-container {
 	display: block;
 	padding-top: 10px;
 }
+
+.disabled {
+    color: lightgray;
+}

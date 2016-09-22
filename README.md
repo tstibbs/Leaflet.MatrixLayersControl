@@ -4,7 +4,7 @@ It's like the [leaflet layers control](http://leafletjs.com/examples/layers-cont
 ## How do I do that?
 Something like this:
 ```
-var control = L.control.matrixLayers(baseLayers, null, {dimensionNames: ['Locality', 'Type'], loadingImage: 'loading.gif'});
+var control = L.control.matrixLayers(baseLayers, null, {dimensionNames: ['Locality', 'Type']});
 control.addTo(map);
 
 control.addMatrixOverlay(urbanParks, 'Urban/Parks');

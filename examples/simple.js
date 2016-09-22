@@ -33,8 +33,7 @@ var matrixLayers = {
 	'Riverside/Buildings': riversideBuildings
 };
 var options = {
-	dimensionNames: ['Locality', 'Type'],
-	loadingImage: 'loading.gif'
+	dimensionNames: ['Locality', 'Type']
 };
 var control = L.control.matrixLayers(baseLayers, null, matrixLayers, options);
 control.addTo(map);

@@ -113,9 +113,12 @@ L.Control.MatrixLayers = L.Control.Layers.extend({
 	},
 
 	_updateLayerClick: function(labelElement) {
-		this._addLoadingIndicator(labelElement, function() {
+		//the whirly loading image never worked very well, so just disable everything instead
+		this._setOverlaysDisablement(true);
+		//give the UI chance to update
+		setTimeout(function() {
 			this._updateSelectedLayers(function() {
-				this._removeLoadingIndicator(labelElement);
+				this._setOverlaysDisablement(false);
 			}.bind(this));
 		}.bind(this));
 	},
@@ -240,18 +243,17 @@ L.Control.MatrixLayers = L.Control.Layers.extend({
 
 		this._refocusOnMap();
 	},
-
-	_addLoadingIndicator: function (labelElement, callback) {
-		var img = document.createElement('img');
-		img.src = this.options.loadingImage;
-		img.class = 'loading-image';
-		img.onload = callback;
-		labelElement.appendChild(img);
-	},
-
-	_removeLoadingIndicator: function (labelElement) {
-		var img = labelElement.getElementsByTagName('img')[0];
-		labelElement.removeChild(img);
+	
+	_setOverlaysDisablement: function(disabled) {
+		var nodes = document.querySelectorAll('div.leaflet-control-layers-overlays *');
+		for (var i = 0; i < nodes.length; i++) {
+			nodes[i].disabled = disabled;
+			if (disabled) {
+				nodes[i].classList.add('disabled');
+			} else {
+				nodes[i].classList.remove('disabled');
+			}
+		}
 	},
 	
 	_saveSelectionState: function(dimensionName, dimensionValue, selected) {
