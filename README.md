@@ -15,6 +15,9 @@ control.addMatrixOverlay(riversideBuildings, 'Riverside/Buildings');
 
 Notice that the first part of each name corresponds to the 'Locality' label and the second part of each name corresponds to the 'Type' label. There could be any number of these dimensions, but too many will affect performance.
 
+## Compatability
+The master branch is developed against leaflet 1.x. There is a 0.7.7 branch which was developed against leaflet 0.7.7, but fixes are not normally backported to this branch - I am happy to accept pull requests to it though.
+
 ## Examples
 [Simple](https://tstibbs.github.io/Leaflet.MatrixLayersControl/examples/simple.html)
 [Fullscreen](https://tstibbs.github.io/Leaflet.MatrixLayersControl/examples/fullscreen.html)
