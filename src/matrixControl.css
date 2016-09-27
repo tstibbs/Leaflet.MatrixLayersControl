@@ -1,8 +1,3 @@
-.leaflet-control-layers-expanded {
-	overflow: auto;
-	max-height: 90vh;
-}
-
 div.dimension-container {
 	display: block;
 	padding-top: 10px;
