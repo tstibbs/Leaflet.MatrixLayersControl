@@ -32,18 +32,18 @@ function factory(leaflet) {
 
 			//get hold of all the dimension values
 			var allDimensions = [];
-			for (i in this._layers) {
-				obj = this._layers[i];
+			for (i = 0; i < this._layers.length; i++) {
+				var obj = this._layers[i];
 				var layerName = obj.name;
 				
 				if (this._matrixLayers !== undefined && layerName in this._matrixLayers) {
 					var dimensionElements = layerName.split('/');
-					for (var i = 0; i < dimensionElements.length; i++) {
-						var dimensionElement = dimensionElements[i];
-						if (allDimensions[i] == undefined) {
-							allDimensions[i] = {};
+					for (var j = 0; j < dimensionElements.length; j++) {
+						var dimensionElement = dimensionElements[j];
+						if (allDimensions[j] == undefined) {
+							allDimensions[j] = {};
 						}
-						allDimensions[i][dimensionElement] = true;
+						allDimensions[j][dimensionElement] = true;
 					}
 				} else {
 					this._addItem(obj);
@@ -74,9 +74,9 @@ function factory(leaflet) {
 				
 				function selectAll(parentElement, all) {
 					var checkboxes = parentElement.getElementsByTagName('input');
-					for (var i = 0; i < checkboxes.length; i++) {
-						checkboxes[i].checked = all;
-						context._saveSelectionState(checkboxes[i].dimensionName, checkboxes[i].dimensionValue, all);
+					for (var j = 0; j < checkboxes.length; j++) {
+						checkboxes[j].checked = all;
+						context._saveSelectionState(checkboxes[j].dimensionName, checkboxes[j].dimensionValue, all);
 					}
 					context._updateLayerClick(parentElement);//once after updating all
 				}
@@ -232,7 +232,7 @@ function factory(leaflet) {
 
 		//we have to override this to stop it finding our inputs and then struggling to find layers for them
 		_onInputClick: function () {
-			var i, input, obj,
+			var i, input,
 				inputs = this._form.getElementsByTagName('input'),
 				inputsLen = inputs.length;
 
@@ -241,13 +241,12 @@ function factory(leaflet) {
 			for (i = 0; i < inputsLen; i++) {
 				input = inputs[i];
 				if (input.dimensionId === undefined) {//check this isn't a matrix layer
-					obj = this._layers[input.layerId];
+					var layer = this._getLayer(input.layerId).layer;
 
-					if (input.checked && !this._map.hasLayer(obj.layer)) {
-						this._map.addLayer(obj.layer);
-
-					} else if (!input.checked && this._map.hasLayer(obj.layer)) {
-						this._map.removeLayer(obj.layer);
+					if (!input.checked && this._map.hasLayer(layer)) {
+						this._map.removeLayer(layer);
+					} else if (input.checked && !this._map.hasLayer(layer)) {
+						this._map.addLayer(layer);
 					}
 				}
 			}
@@ -286,6 +285,10 @@ function factory(leaflet) {
 			} else {
 				return true;//default to being selected
 			}
+		},
+		
+		_checkDisabledLayers: function() {
+			//do nothing, we can't support this functionality for now
 		}
 
 	});
