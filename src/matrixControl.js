@@ -1,8 +1,115 @@
 function factory(leaflet) {
+	var MatrixLayersModel = leaflet.Control.Layers.extend({
+
+		initialize: function (dimensionNames) {
+			this._dimensionNames = dimensionNames;
+		},
+
+		_layers: {
+// 			"dimension1": {
+// 				"dimensionValue1": true,
+// 				"dimensionValue2": false
+// 			},
+// 			"dimension2": {
+// 			}
+		},
+		_selections: {
+// 			"dimension1": {
+// 				"dimensionValue1": true,
+// 				"dimensionValue2": false
+// 			},
+// 			"dimension2": {
+// 			}
+		},
+		
+		addLayer: function(layer, name) {
+			if (this._layers == undefined) {
+				this._layers = {};
+			}
+			this._layers[name] = layer
+		},
+
+		getLayers: function() {
+			return this._layers;
+		},
+		
+		inputChanged: function(dimensionName, dimensionValue, checked) {
+			this._saveSelectionState(dimensionName, dimensionValue, checked);
+			if (this._selections[dimensionName] == null) {
+				this._selections[dimensionName] = {};
+			}
+			this._selections[dimensionName][dimensionValue] = checked;
+		},
+		
+		//
+		
+		getSelectedLayerNames: function() {
+			//map the group dimension names to an ordering
+			var orderedDimensionElements = new Array();
+			for (var i = 0; i < this._dimensionNames.length; i++) {
+				var dimensionName = this._dimensionNames[i];
+				var dimensionElements = [];
+				var dimensionSelections = this._selections[dimensionName];
+				for (var dimId in dimensionSelections) {
+					if (dimensionSelections[dimId] === true) {
+						dimensionElements.push(dimId);
+					}
+				}
+				orderedDimensionElements.push(dimensionElements);
+			}
+			//iterate to construct a list of selected layers
+			var selectedLayerNames = {};
+			this._depthFirstIteration(orderedDimensionElements, 0, "", function(path) {
+				selectedLayerNames[path] = true;
+			});
+			
+			return selectedLayerNames;
+		},
+		
+		_depthFirstIteration: function (dimensions, dimensionIndex, parentPath, found) {
+			var currentDimension = dimensions[dimensionIndex];
+			if (currentDimension != undefined) {
+				for (var i = 0; i < currentDimension.length; i++) {
+					var dimensionValue = currentDimension[i];
+					var newPath = dimensionValue;
+					if (parentPath.length > 0) {
+						newPath = parentPath + '/' + newPath;
+					}
+					var newIndex = dimensionIndex + 1;
+					this._depthFirstIteration(dimensions, newIndex, newPath, found);
+				}
+			} else {
+				found(parentPath);
+			}
+		},
+		
+		//
+		
+		_saveSelectionState: function(dimensionName, dimensionValue, selected) {
+			if (localStorage !== undefined) {
+				localStorage.setItem('matrix_layers_control:' + dimensionName + '/' + dimensionValue, selected.toString());
+			}
+		},
+		
+		_getSelectionState: function(dimensionName, dimensionValue) {
+			if (localStorage !== undefined) {
+				var selected = localStorage.getItem('matrix_layers_control:' + dimensionName + '/' + dimensionValue);
+				if (selected == null) {
+					return true;//default to being selected
+				} else {
+					return "true" == selected;//local storage can only store strings
+				}
+			} else {
+				return true;//default to being selected
+			}
+		}
+	});
+	
 	var matrixLayers = leaflet.Control.Layers.extend({
 
 		initialize: function (baseLayers, overlays, matrixOverlays, options) {
 			leaflet.Control.Layers.prototype.initialize.call(this, baseLayers, overlays, options);
+			this._model = new MatrixLayersModel(this.options.dimensionNames);
 
 			for (layerName in matrixOverlays) {
 				this._addMatrixOverlay(matrixOverlays[layerName], layerName);
@@ -26,17 +133,16 @@ function factory(leaflet) {
 			this._baseLayersList.innerHTML = '';
 			this._overlaysList.innerHTML = '';
 
-			var baseLayersPresent = false,
-				overlaysPresent = false,
-				i, obj;
+			var baseLayersPresent = false;
+			var overlaysPresent = false;
 
 			//get hold of all the dimension values
 			var allDimensions = [];
-			for (i = 0; i < this._layers.length; i++) {
+			for (var i = 0; i < this._layers.length; i++) {
 				var obj = this._layers[i];
 				var layerName = obj.name;
 				
-				if (this._matrixLayers !== undefined && layerName in this._matrixLayers) {
+				if (this._model.getLayers() !== undefined && layerName in this._model.getLayers()) {
 					var dimensionElements = layerName.split('/');
 					for (var j = 0; j < dimensionElements.length; j++) {
 						var dimensionElement = dimensionElements[j];
@@ -76,7 +182,7 @@ function factory(leaflet) {
 					var checkboxes = parentElement.getElementsByTagName('input');
 					for (var j = 0; j < checkboxes.length; j++) {
 						checkboxes[j].checked = all;
-						context._saveSelectionState(checkboxes[j].dimensionName, checkboxes[j].dimensionValue, all);
+						context._model.inputChanged(checkboxes[j].dimensionName, checkboxes[j].dimensionValue, all);
 					}
 					context._updateLayerClick(parentElement);//once after updating all
 				}
@@ -104,19 +210,15 @@ function factory(leaflet) {
 		},
 
 		_addMatrixOverlay: function (layer, name) {
-			if (this._matrixLayers == undefined) {
-				this._matrixLayers = {};
-			}
-			this._matrixLayers[name] = layer;
+			this._model.addLayer(layer, name);
 			this.addOverlay(layer, name);
 		},
-		
 		
 		_onMatrixInputClick: function (e) {
 			this._handlingClick = true;
 
 			var input = e.currentTarget;
-			this._saveSelectionState(input.dimensionName, input.dimensionValue, input.checked);
+			this._model.inputChanged(input.dimensionName, input.dimensionValue, input.checked);
 			var labelElement = input.parentElement;
 			this._updateLayerClick(labelElement);
 		},
@@ -136,38 +238,12 @@ function factory(leaflet) {
 			//reset - onInputClick might have got there before us
 			this._handlingClick = true;
 
-			//get the inputs in each div and see which are ticked, to get a list of the selected dimension elements
-			var divs = this._overlaysList.getElementsByTagName('div');
-			var checkedDimensions = {};
-			for (var i = 0; i < divs.length; i++) {
-				var div = divs[i];
-				var dimension = div.dimensionName;
-				var inputs = div.getElementsByTagName('input');
-				if (checkedDimensions[dimension] == undefined) {
-					checkedDimensions[dimension] = new Array();
-				}
-				for (var j = 0; j < inputs.length; j++) {
-					var input = inputs[j];
-					if (input.checked) {
-						checkedDimensions[dimension].push(input.dimensionId);
-					}
-				}
-			}
-			//map the group dimension names to an ordering
-			var orderedDimensionElements = new Array();
-			for (var i = 0; i < this.options.dimensionNames.length; i++) {
-				var dimensionName = this.options.dimensionNames[i];
-				var dimensionElements = checkedDimensions[dimensionName];
-				orderedDimensionElements.push(dimensionElements);
-			}
-			//iterate to construct a list of selected layers
-			var selectedLayerNames = {};
-			this._depthFirstIteration(orderedDimensionElements, 0, "", function(path){
-				selectedLayerNames[path] = true;
-			});
+			var selectedLayerNames = this._model.getSelectedLayerNames();
+			
 			//now add or remove the layers from the map
-			Object.keys(this._matrixLayers).forEach(function (layerName) {
-				var layer = this._matrixLayers[layerName];
+			var layers = this._model.getLayers();
+			Object.keys(layers).forEach(function (layerName) {
+				var layer = layers[layerName];
 				if (layerName in selectedLayerNames && !this._map.hasLayer(layer)) {
 					this._map.addLayer(layer);
 
@@ -184,31 +260,17 @@ function factory(leaflet) {
 
 			this._refocusOnMap();
 		},
-		
-		_depthFirstIteration: function (dimensions, dimensionIndex, parentPath, found) {
-			var currentDimension = dimensions[dimensionIndex];
-			if (currentDimension != undefined) {
-				for (var i = 0; i < currentDimension.length; i++) {
-					var dimensionValue = currentDimension[i];
-					var newPath = dimensionValue;
-					if (parentPath.length > 0) {
-						newPath = parentPath + '/' + newPath;
-					}
-					var newIndex = dimensionIndex + 1;
-					this._depthFirstIteration(dimensions, newIndex, newPath, found);
-				}
-			} else {
-				found(parentPath);
-			}
-		},
 
 		_addMatrixItem: function (parentElement, dimensionName, dimensionValue) {
+			var selected = this._model._getSelectionState(dimensionName, dimensionValue);
+			this._model.inputChanged(dimensionName, dimensionValue, selected);
+
 			var label = document.createElement('label');
 
 			var input = document.createElement('input');
 			input.type = 'checkbox';
 			input.className = 'leaflet-control-layers-selector';
-			input.checked = this._getSelectionState(dimensionName, dimensionValue);
+			input.checked = selected;
 			input.dimensionId = dimensionValue;//L.stamp(obj.layer);//TODO//dimensionName + "::" + 
 			input.dimensionName = dimensionName;
 			input.dimensionValue = dimensionValue;
@@ -232,14 +294,12 @@ function factory(leaflet) {
 
 		//we have to override this to stop it finding our inputs and then struggling to find layers for them
 		_onInputClick: function () {
-			var i, input,
-				inputs = this._form.getElementsByTagName('input'),
-				inputsLen = inputs.length;
+			var inputs = this._form.getElementsByTagName('input');
 
 			this._handlingClick = true;
 
-			for (i = 0; i < inputsLen; i++) {
-				input = inputs[i];
+			for (var i = 0; i < inputs.length; i++) {
+				var input = inputs[i];
 				if (input.dimensionId === undefined) {//check this isn't a matrix layer
 					var layer = this._getLayer(input.layerId).layer;
 
@@ -268,25 +328,6 @@ function factory(leaflet) {
 			}
 		},
 		
-		_saveSelectionState: function(dimensionName, dimensionValue, selected) {
-			if (localStorage !== undefined) {
-				localStorage.setItem('matrix_layers_control:' + dimensionName + '/' + dimensionValue, selected.toString());
-			}
-		},
-		
-		_getSelectionState: function(dimensionName, dimensionValue) {
-			if (localStorage !== undefined) {
-				var selected = localStorage.getItem('matrix_layers_control:' + dimensionName + '/' + dimensionValue);
-				if (selected == null) {
-					return true;//default to being selected
-				} else {
-					return "true" == selected;//local storage can only store strings
-				}
-			} else {
-				return true;//default to being selected
-			}
-		},
-		
 		_checkDisabledLayers: function() {
 			//do nothing, we can't support this functionality for now
 		}
@@ -306,6 +347,6 @@ function factory(leaflet) {
         root.L.Control.MatrixLayers = factory(root.L);
 		root.L.control.matrixLayers = function (baseLayers, overlays, matrixOverlays, options) {
 			return new root.L.Control.MatrixLayers(baseLayers, overlays, matrixOverlays, options);
-};
+		};
     }
 }(this, factory));
