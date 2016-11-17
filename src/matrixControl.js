@@ -21,12 +21,54 @@ function factory(leaflet) {
 // 			"dimension2": {
 // 			}
 		},
+		_layersToDimensions: {
+// 			layer1: {
+// 				"dimension1": "dimensionValue1",
+// 				"dimension2": "dimensionValue5"
+// 			}
+		},
+		_dimensionsToRelatedLayers: {
+// 			"dimension1": {
+// 				"dimensionValue1": [layer1, layer2],
+// 				"dimensionValue2": [layer3, layer4]
+// 			},
+// 			"dimension2": {
+// 			}
+		},
+
+		setMap: function(map) {
+			this._map = map;
+		},
 		
 		addLayer: function(layer, name) {
 			if (this._layers == undefined) {
 				this._layers = {};
 			}
-			this._layers[name] = layer
+			this._layers[name] = layer;
+			var layerDims = {};
+			var dimensionElements = layerName.split('/');
+			for (var i = 0; i < dimensionElements.length; i++) {
+				var dimensionName = this._dimensionNames[i];
+				var dimensionValue = dimensionElements[i];
+				layerDims[dimensionName] = dimensionValue;
+
+				if (this._dimensionsToRelatedLayers[dimensionName] == null) {
+					this._dimensionsToRelatedLayers[dimensionName] = {};
+				}
+				if (this._dimensionsToRelatedLayers[dimensionName][dimensionValue] == null) {
+					this._dimensionsToRelatedLayers[dimensionName][dimensionValue] = [];
+				}
+				this._dimensionsToRelatedLayers[dimensionName][dimensionValue].push(layer);
+			}
+			this._setLayerDimensions(layer, layerDims);
+		},
+
+		_setLayerDimensions: function(layer, layerDims) {
+			this._layersToDimensions[L.Util.stamp(layer)] = layerDims;
+		},
+
+		_getLayerDimensions: function(layer) {
+			return this._layersToDimensions[L.Util.stamp(layer)];
 		},
 
 		getLayers: function() {
@@ -83,6 +125,40 @@ function factory(leaflet) {
 			}
 		},
 		
+		getCountForElement: function(dimensionName, dimensionValue){
+			var layers = this._getLayersForInput(dimensionName, dimensionValue);
+			var count = this._sumMarkerCounts(layers);
+			return count;
+		},
+
+		_getLayersForInput: function(currentDimensionName, currentDimensionValue) {
+			var layers = this._dimensionsToRelatedLayers[currentDimensionName][currentDimensionValue];
+			if (layers != null) {
+				return layers.filter(function(layer) {
+					var layerDimensions = this._getLayerDimensions(layer);
+					var allTicked = Object.keys(layerDimensions).reduce(function(allTicked, dimensionName) {
+						if (dimensionName != currentDimensionName) {
+							var dimensionValue = layerDimensions[dimensionName];
+							var ticked = this._selections[dimensionName] != null && this._selections[dimensionName][dimensionValue] === true;
+							return allTicked && ticked;
+						} else {
+							return allTicked;
+						}
+					}.bind(this), true);
+					return allTicked;
+				}, this);
+			} else {
+				return null;
+			}
+		},
+
+		_sumMarkerCounts: function(layers) {
+			var count = layers.reduce(function(total, curr) {
+				return total + curr.getLayers().length;
+			}, 0);
+			return count;
+		},
+		
 		//
 		
 		_saveSelectionState: function(dimensionName, dimensionValue, selected) {
@@ -91,7 +167,7 @@ function factory(leaflet) {
 			}
 		},
 		
-		_getSelectionState: function(dimensionName, dimensionValue) {
+		getSavedSelectionState: function(dimensionName, dimensionValue) {
 			if (localStorage !== undefined) {
 				var selected = localStorage.getItem('matrix_layers_control:' + dimensionName + '/' + dimensionValue);
 				if (selected == null) {
@@ -109,6 +185,7 @@ function factory(leaflet) {
 
 		initialize: function (baseLayers, overlays, matrixOverlays, options) {
 			leaflet.Control.Layers.prototype.initialize.call(this, baseLayers, overlays, options);
+			this._matrixInputs = [];
 			this._model = new MatrixLayersModel(this.options.dimensionNames);
 
 			for (layerName in matrixOverlays) {
@@ -118,6 +195,7 @@ function factory(leaflet) {
 
 		onAdd: function (map) {
 			var container = leaflet.Control.Layers.prototype.onAdd.call(this, map);
+			this._model.setMap(map);
 			
 			this._updateSelectedLayers();
 
@@ -251,6 +329,16 @@ function factory(leaflet) {
 					this._map.removeLayer(layer);
 				}
 			}, this);
+
+			for (var i = 0; i < this._matrixInputs.length; i++) {
+				var label = this._matrixInputs[i];
+				var input = label.querySelector('input');
+				var dimensionName = input.dimensionName;
+				var dimensionValue = input.dimensionValue;
+				var count = this._model.getCountForElement(dimensionName, dimensionValue);
+				var displayElement = label.querySelector('span.count');
+				displayElement.innerHTML = count;
+			}
 			
 			if (callback !== undefined) {
 				callback();			
@@ -262,7 +350,7 @@ function factory(leaflet) {
 		},
 
 		_addMatrixItem: function (parentElement, dimensionName, dimensionValue) {
-			var selected = this._model._getSelectionState(dimensionName, dimensionValue);
+			var selected = this._model.getSavedSelectionState(dimensionName, dimensionValue);
 			this._model.inputChanged(dimensionName, dimensionValue, selected);
 
 			var label = document.createElement('label');
@@ -282,14 +370,25 @@ function factory(leaflet) {
 				displayString = this.options.dimensionValueLabels[dimensionName][dimensionValue];
 			}
 			var display = document.createElement('span');
-			display.innerHTML = ' ' + displayString;
+			var displayLeft = document.createElement('span');
+			var displayCount = document.createElement('span');
+			displayCount.classList.add('count');
+			var displayRight = document.createElement('span');
+			var count = this._model.getCountForElement(dimensionName, dimensionValue)
+			displayLeft.innerHTML = ' ' + displayString + ' (';
+			displayCount.innerHTML = count;
+			displayRight.innerHTML = ')';
+
+			display.appendChild(displayLeft);
+			display.appendChild(displayCount);
+			display.appendChild(displayRight);
 
 			label.appendChild(input);
 			label.appendChild(display);
 
 			parentElement.appendChild(label);
 
-			return label;
+			this._matrixInputs.push(label);
 		},
 
 		//we have to override this to stop it finding our inputs and then struggling to find layers for them
