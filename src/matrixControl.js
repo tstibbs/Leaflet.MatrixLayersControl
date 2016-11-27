@@ -5,14 +5,10 @@ function factory(leaflet) {
 			this._dimensionNames = dimensionNames;
 		},
 
-		_layers: {
-// 			"dimension1": {
-// 				"dimensionValue1": true,
-// 				"dimensionValue2": false
-// 			},
-// 			"dimension2": {
-// 			}
-		},
+		_layers: [
+//			"layer1": the actual layer object,
+//			"layer2": the actual layer object,
+		],
 		_selections: {
 // 			"dimension1": {
 // 				"dimensionValue1": true,
@@ -46,19 +42,22 @@ function factory(leaflet) {
 			}
 			this._layers[name] = layer;
 			var layerDims = {};
-			var dimensionElements = layerName.split('/');
+			var dimensionElements = name.split('/');
 			for (var i = 0; i < dimensionElements.length; i++) {
 				var dimensionName = this._dimensionNames[i];
 				var dimensionValue = dimensionElements[i];
 				layerDims[dimensionName] = dimensionValue;
-
-				if (this._dimensionsToRelatedLayers[dimensionName] == null) {
-					this._dimensionsToRelatedLayers[dimensionName] = {};
+				var dimensionValueParts = dimensionValue.split(';');
+				for (var j = 0; j < dimensionValueParts.length; j++) {
+					var dimensionValuePart = dimensionValueParts[j];
+					if (this._dimensionsToRelatedLayers[dimensionName] == null) {
+						this._dimensionsToRelatedLayers[dimensionName] = {};
+					}
+					if (this._dimensionsToRelatedLayers[dimensionName][dimensionValuePart] == null) {
+						this._dimensionsToRelatedLayers[dimensionName][dimensionValuePart] = [];
+					}
+					this._dimensionsToRelatedLayers[dimensionName][dimensionValuePart].push(layer);
 				}
-				if (this._dimensionsToRelatedLayers[dimensionName][dimensionValue] == null) {
-					this._dimensionsToRelatedLayers[dimensionName][dimensionValue] = [];
-				}
-				this._dimensionsToRelatedLayers[dimensionName][dimensionValue].push(layer);
 			}
 			this._setLayerDimensions(layer, layerDims);
 		},
@@ -93,35 +92,40 @@ function factory(leaflet) {
 				var dimensionElements = [];
 				var dimensionSelections = this._selections[dimensionName];
 				for (var dimId in dimensionSelections) {
-					if (dimensionSelections[dimId] === true) {
+					if (dimensionSelections[dimId] === true || dimId == '*') {
 						dimensionElements.push(dimId);
 					}
 				}
 				orderedDimensionElements.push(dimensionElements);
 			}
 			//iterate to construct a list of selected layers
-			var selectedLayerNames = {};
-			this._depthFirstIteration(orderedDimensionElements, 0, "", function(path) {
-				selectedLayerNames[path] = true;
+			var selectedLayers = [];
+			this._depthFirstIteration(orderedDimensionElements, 0, "", function(newSelectedLayers) {
+				selectedLayers = selectedLayers.concat(newSelectedLayers);
 			});
 			
-			return selectedLayerNames;
+			return selectedLayers;
 		},
 		
-		_depthFirstIteration: function (dimensions, dimensionIndex, parentPath, found) {
+		_depthFirstIteration: function (dimensions, dimensionIndex, parentPath, found, selectedLayers) {
 			var currentDimension = dimensions[dimensionIndex];
+			var dimensionName = this._dimensionNames[dimensionIndex];
 			if (currentDimension != undefined) {
+				var dimensionLayers = this._dimensionsToRelatedLayers[dimensionName];
 				for (var i = 0; i < currentDimension.length; i++) {
 					var dimensionValue = currentDimension[i];
-					var newPath = dimensionValue;
-					if (parentPath.length > 0) {
-						newPath = parentPath + '/' + newPath;
+					var dimensionValueLayers = dimensionLayers[dimensionValue];
+					var newSelectedLayers = dimensionValueLayers;
+					if (dimensionIndex > 0) {//i.e. we're not at the first one
+						newSelectedLayers = selectedLayers.filter(function(n) {
+							return dimensionValueLayers.indexOf(n) != -1;
+						});
 					}
 					var newIndex = dimensionIndex + 1;
-					this._depthFirstIteration(dimensions, newIndex, newPath, found);
+					this._depthFirstIteration(dimensions, newIndex, parentPath, found, newSelectedLayers);
 				}
 			} else {
-				found(parentPath);
+				found(selectedLayers);
 			}
 		},
 		
@@ -132,15 +136,30 @@ function factory(leaflet) {
 		},
 
 		_getLayersForInput: function(currentDimensionName, currentDimensionValue) {
-			var layers = this._dimensionsToRelatedLayers[currentDimensionName][currentDimensionValue];
-			if (layers != null) {
+			var dimensionValueParts = currentDimensionValue.split(';');
+			dimensionValueParts.push('*');
+			var layers = [];
+			for (var i = 0; i < dimensionValueParts.length; i++) {
+				var part = dimensionValueParts[i];
+				var partsLayers = this._dimensionsToRelatedLayers[currentDimensionName][part];
+				if (partsLayers != null) {
+					layers = layers.concat(partsLayers.filter(function (item) {
+						return layers.indexOf(item) < 0;
+					}));
+				}
+			}
+			if (layers.length > 0) {
 				return layers.filter(function(layer) {
 					var layerDimensions = this._getLayerDimensions(layer);
 					var allTicked = Object.keys(layerDimensions).reduce(function(allTicked, dimensionName) {
 						if (dimensionName != currentDimensionName) {
 							var dimensionValue = layerDimensions[dimensionName];
-							var ticked = this._selections[dimensionName] != null && this._selections[dimensionName][dimensionValue] === true;
-							return allTicked && ticked;
+							var dimensionValueParts = dimensionValue.split(';');
+							for (var j = 0; j < dimensionValueParts.length; j++) {
+								var ticked = this._selections[dimensionName] != null && this._selections[dimensionName][dimensionValue] === true;
+								allTicked = allTicked && ticked;
+							}
+							return allTicked;
 						} else {
 							return allTicked;
 						}
@@ -227,7 +246,11 @@ function factory(leaflet) {
 						if (allDimensions[j] == undefined) {
 							allDimensions[j] = {};
 						}
-						allDimensions[j][dimensionElement] = true;
+						var dimensionElementParts = dimensionElement.split(';');
+						for (var k = 0; k < dimensionElementParts.length; k++) {
+							var part = dimensionElementParts[k];
+							allDimensions[j][part] = true;
+						}
 					}
 				} else {
 					this._addItem(obj);
@@ -316,16 +339,16 @@ function factory(leaflet) {
 			//reset - onInputClick might have got there before us
 			this._handlingClick = true;
 
-			var selectedLayerNames = this._model.getSelectedLayerNames();
+			var selectedLayers = this._model.getSelectedLayerNames();
 			
 			//now add or remove the layers from the map
 			var layers = this._model.getLayers();
 			Object.keys(layers).forEach(function (layerName) {
 				var layer = layers[layerName];
-				if (layerName in selectedLayerNames && !this._map.hasLayer(layer)) {
+				if (selectedLayers.indexOf(layer) != -1 && !this._map.hasLayer(layer)) {
 					this._map.addLayer(layer);
 
-				} else if (!(layerName in selectedLayerNames) && this._map.hasLayer(layer)) {
+				} else if (!(selectedLayers.indexOf(layer) != -1) && this._map.hasLayer(layer)) {
 					this._map.removeLayer(layer);
 				}
 			}, this);
