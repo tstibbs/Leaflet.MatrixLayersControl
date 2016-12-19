@@ -206,6 +206,13 @@ function factory(leaflet) {
 	
 	var matrixLayers = leaflet.Control.Layers.extend({
 
+		options: {
+			//only specify those for which we really need a default.
+			dimensionNames: {},
+			aspects: [],
+			multiAspects: false
+		},
+
 		initialize: function (baseLayers, overlays, matrixOverlays, options) {
 			leaflet.Control.Layers.prototype.initialize.call(this, baseLayers, overlays, options);
 			this._overlaysByAspect = {};
