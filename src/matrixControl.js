@@ -3,34 +3,38 @@ function factory(leaflet) {
 
 		initialize: function (dimensionNames) {
 			this._dimensionNames = dimensionNames;
+			this._layers = {};
+			this._selections = {};
+			this._layersToDimensions = {};
+			this._dimensionsToRelatedLayers = {};
 		},
 
-		_layers: [
+//		_layers: {
 //			"layer1": the actual layer object,
 //			"layer2": the actual layer object,
-		],
-		_selections: {
+//		},
+//		_selections: {
 // 			"dimension1": {
 // 				"dimensionValue1": true,
 // 				"dimensionValue2": false
 // 			},
 // 			"dimension2": {
 // 			}
-		},
-		_layersToDimensions: {
+//		},
+//		_layersToDimensions: {
 // 			layer1: {
 // 				"dimension1": "dimensionValue1",
 // 				"dimension2": "dimensionValue5"
 // 			}
-		},
-		_dimensionsToRelatedLayers: {
+//		},
+//		_dimensionsToRelatedLayers: {
 // 			"dimension1": {
 // 				"dimensionValue1": [layer1, layer2],
 // 				"dimensionValue2": [layer3, layer4]
 // 			},
 // 			"dimension2": {
 // 			}
-		},
+//		},
 
 		setMap: function(map) {
 			this._map = map;
@@ -204,25 +208,64 @@ function factory(leaflet) {
 
 		initialize: function (baseLayers, overlays, matrixOverlays, options) {
 			leaflet.Control.Layers.prototype.initialize.call(this, baseLayers, overlays, options);
-			this._matrixInputs = [];
-			this._model = new MatrixLayersModel(this.options.dimensionNames);
-
-			for (layerName in matrixOverlays) {
-				this._addMatrixOverlay(matrixOverlays[layerName], layerName);
+			this._overlaysByAspect = {};
+			if (this.options.multiAspects) {
+				this._modelByAspect = {};
+				this._matrixInputsByAspect = {};
+				for (var i = 0; i < this.options.aspects.length; i++) {
+					var aspect = this.options.aspects[i];
+					this._modelByAspect[aspect] = new MatrixLayersModel(this.options.dimensionNames[aspect]);
+					this._matrixInputsByAspect[aspect] = [];
+					this._overlaysByAspect[aspect] = [];
+					
+					for (layerName in matrixOverlays[aspect]) {
+						this._addMatrixOverlay(matrixOverlays[aspect][layerName], layerName, aspect);
+					}
+				}
+			} else {
+				this._matrixInputsByAspect = [];
+				this._modelByAspect = new MatrixLayersModel(this.options.dimensionNames);
+				this._overlaysByAspect[undefined] = [];
+				
+				for (layerName in matrixOverlays) {
+					this._addMatrixOverlay(matrixOverlays[layerName], layerName);
+				}
+			}
+		},
+		
+		_model: function (aspect) {
+			if (this.options.multiAspects) {
+				return this._modelByAspect[aspect];
+			} else {
+				return this._modelByAspect;
+			}
+		},
+		
+		_matrixInputs: function (aspect) {
+			if (this.options.multiAspects) {
+				return this._matrixInputsByAspect[aspect];
+			} else {
+				return this._matrixInputsByAspect;
 			}
 		},
 
 		onAdd: function (map) {
 			var container = leaflet.Control.Layers.prototype.onAdd.call(this, map);
-			this._model.setMap(map);
-			
-			this._updateSelectedLayers();
+			if (this.options.multiAspects) {
+				for (var i = 0; i < this.options.aspects.length; i++) {
+					var aspect = this.options.aspects[i];
+					this._model(aspect).setMap(map);
+					this._updateSelectedLayers(aspect, undefined);
+				}
+			} else {
+				this._model().setMap(map);
+				this._updateSelectedLayers();
+			}
 
 			return container;
 		},
 
 		_update: function () {
-			//much borrowed from https://github.com/Leaflet/Leaflet/blob/59a8c00a1850103f4fba8561961282eb21b29e7d/src/control/Control.Layers.js#L132
 			if (!this._container) {
 				return;
 			}
@@ -232,117 +275,134 @@ function factory(leaflet) {
 
 			var baseLayersPresent = false;
 			var overlaysPresent = false;
-
-			//get hold of all the dimension values
-			var allDimensions = [];
-			for (var i = 0; i < this._layers.length; i++) {
-				var obj = this._layers[i];
-				var layerName = obj.name;
+			
+			//TODO what happens if it's not multi aspect?
+			for (var a = 0; a < this.options.aspects.length; a++) {
+				var aspect = this.options.aspects[a];
 				
-				if (this._model.getLayers() !== undefined && layerName in this._model.getLayers()) {
-					var dimensionElements = layerName.split('/');
-					for (var j = 0; j < dimensionElements.length; j++) {
-						var dimensionElement = dimensionElements[j];
-						if (allDimensions[j] == undefined) {
-							allDimensions[j] = {};
+				var aspectElement = document.createElement('div');
+				aspectElement.className = 'aspect';
+				this._overlaysList.appendChild(aspectElement);
+				
+				//get hold of all the dimension values
+				var allDimensions = [];
+				for (var i = 0; i < this._overlaysByAspect[aspect].length; i++) {
+					var obj = this._overlaysByAspect[aspect][i];
+					var layerName = obj.name;
+					
+					if (this._model(aspect).getLayers() !== undefined && layerName in this._model(aspect).getLayers()) {
+						var dimensionElements = layerName.split('/');
+						for (var j = 0; j < dimensionElements.length; j++) {
+							var dimensionElement = dimensionElements[j];
+							if (allDimensions[j] == undefined) {
+								allDimensions[j] = {};
+							}
+							var dimensionElementParts = dimensionElement.split(';');
+							for (var k = 0; k < dimensionElementParts.length; k++) {
+								var part = dimensionElementParts[k];
+								allDimensions[j][part] = true;
+							}
 						}
-						var dimensionElementParts = dimensionElement.split(';');
-						for (var k = 0; k < dimensionElementParts.length; k++) {
-							var part = dimensionElementParts[k];
-							allDimensions[j][part] = true;
+					} else {
+						this._addItem(obj);
+						overlaysPresent = overlaysPresent || obj.overlay;
+						baseLayersPresent = baseLayersPresent || !obj.overlay;
+					}
+				}
+
+				//now create the UI for all dimensions
+				for (var i = 0; i < allDimensions.length; i++) {
+					var dimensionName = this.options.dimensionNames[aspect][i];
+					var dimension = allDimensions[i];
+					var parentElement = document.createElement('div');
+					parentElement.className = 'dimension-container';
+					parentElement.dimensionName = dimensionName;
+					
+					var dimensionDisplay = dimensionName;
+					if (this.options.dimensionLabels != null) {
+						var display = this.options.dimensionLabels[dimensionName];
+						if (display != null) {
+							dimensionDisplay = display;
 						}
 					}
-				} else {
-					this._addItem(obj);
-					overlaysPresent = overlaysPresent || obj.overlay;
-					baseLayersPresent = baseLayersPresent || !obj.overlay;
-				}
-			}
+					
+					var dimensionEl = document.createElement('div');
+					dimensionEl.innerHTML = '<span>' + dimensionDisplay + ' (<a href="#" class="check-all">all</a> / <a href="#" class="check-none">none</a>)</span>';
+					var context = this;
+					
+					function selectAll(parentElement, aspect, all) {
+						var checkboxes = parentElement.getElementsByTagName('input');
+						for (var j = 0; j < checkboxes.length; j++) {
+							checkboxes[j].checked = all;
+							context._model(aspect).inputChanged(checkboxes[j].dimensionName, checkboxes[j].dimensionValue, all);
+						}
+						context._updateLayerClick(aspect);//once after updating all
+					}
 
-			//now create the UI for all dimensions
-			for (var i = 0; i < allDimensions.length; i++) {
-				var dimensionName = this.options.dimensionNames[i];
-				var dimension = allDimensions[i];
-				var parentElement = document.createElement('div');
-				parentElement.className = 'dimension-container';
-				parentElement.dimensionName = dimensionName;
-				
-				var dimensionDisplay = dimensionName;
-				if (this.options.dimensionLabels != null) {
-					var display = this.options.dimensionLabels[dimensionName];
-					if (display != null) {
-						dimensionDisplay = display;
-					}
+					var checkAllHref = dimensionEl.querySelector('a.check-all');
+					var checkNoneHref = dimensionEl.querySelector('a.check-none');
+					(function(parentElement, aspect) {//scoping
+						checkAllHref.onclick = function() {
+							selectAll(parentElement, aspect, true);
+							return false;
+						}
+						checkNoneHref.onclick = function() {
+							selectAll(parentElement, aspect, false);
+							return false;
+						}
+					})(parentElement, aspect);
+					parentElement.appendChild(dimensionEl);
+								
+					aspectElement.appendChild(parentElement);
+					Object.keys(dimension).forEach(function (dimensionValue) { 
+						this._addMatrixItem(parentElement, dimensionName, dimensionValue, aspect);
+					}, this);
 				}
 				
-				var dimensionEl = document.createElement('div');
-				dimensionEl.innerHTML = '<span>' + dimensionDisplay + ' (<a href="#" class="check-all">all</a> / <a href="#" class="check-none">none</a>)</span>';
-				var context = this;
-				
-				function selectAll(parentElement, all) {
-					var checkboxes = parentElement.getElementsByTagName('input');
-					for (var j = 0; j < checkboxes.length; j++) {
-						checkboxes[j].checked = all;
-						context._model.inputChanged(checkboxes[j].dimensionName, checkboxes[j].dimensionValue, all);
-					}
-					context._updateLayerClick(parentElement);//once after updating all
-				}
-
-				var checkAllHref = dimensionEl.querySelector('a.check-all');
-				var checkNoneHref = dimensionEl.querySelector('a.check-none');
-				(function(parentElement) {//scoping
-					checkAllHref.onclick = function() {
-						selectAll(parentElement, true);
-						return false;
-					}
-					checkNoneHref.onclick = function() {
-						selectAll(parentElement, false);
-						return false;
-					}
-				})(parentElement);
-				parentElement.appendChild(dimensionEl);
-							
-				this._overlaysList.appendChild(parentElement);
-				Object.keys(dimension).forEach(function (dimensionValue) { 
-					this._addMatrixItem(parentElement, dimensionName, dimensionValue);
-				}, this);
 			}
 
 		},
 
-		_addMatrixOverlay: function (layer, name) {
-			this._model.addLayer(layer, name);
-			this.addOverlay(layer, name);
+		_addMatrixOverlay: function (layer, name, aspect) {
+			this._model(aspect).addLayer(layer, name);	
+			this._overlaysByAspect[aspect].push({
+				layer: layer,
+				name: name,
+				overlay: true
+			});
+			
 		},
 		
-		_onMatrixInputClick: function (e) {
-			this._handlingClick = true;
+		_onMatrixInputClick: function(aspect) {
+			return function (e) {
+				this._handlingClick = true;
 
-			var input = e.currentTarget;
-			this._model.inputChanged(input.dimensionName, input.dimensionValue, input.checked);
-			var labelElement = input.parentElement;
-			this._updateLayerClick(labelElement);
+				var input = e.currentTarget;
+				this._model(aspect).inputChanged(input.dimensionName, input.dimensionValue, input.checked);
+				//var labelElement = input.parentElement;
+				this._updateLayerClick(aspect);
+			}
 		},
 
-		_updateLayerClick: function(labelElement) {
+		_updateLayerClick: function(aspect) {
 			//the whirly loading image never worked very well, so just disable everything instead
 			this._setOverlaysDisablement(true);
 			//give the UI chance to update
 			setTimeout(function() {
-				this._updateSelectedLayers(function() {
+				this._updateSelectedLayers(aspect, function() {
 					this._setOverlaysDisablement(false);
 				}.bind(this));
 			}.bind(this));
 		},
 
-		_updateSelectedLayers: function(callback) {
+		_updateSelectedLayers: function(aspect, callback) {
 			//reset - onInputClick might have got there before us
 			this._handlingClick = true;
 
-			var selectedLayers = this._model.getSelectedLayerNames();
+			var selectedLayers = this._model(aspect).getSelectedLayerNames();
 			
 			//now add or remove the layers from the map
-			var layers = this._model.getLayers();
+			var layers = this._model(aspect).getLayers();
 			Object.keys(layers).forEach(function (layerName) {
 				var layer = layers[layerName];
 				if (selectedLayers.indexOf(layer) != -1 && !this._map.hasLayer(layer)) {
@@ -353,12 +413,12 @@ function factory(leaflet) {
 				}
 			}, this);
 
-			for (var i = 0; i < this._matrixInputs.length; i++) {
-				var label = this._matrixInputs[i];
+			for (var i = 0; i < this._matrixInputs(aspect).length; i++) {
+				var label = this._matrixInputs(aspect)[i];
 				var input = label.querySelector('input');
 				var dimensionName = input.dimensionName;
 				var dimensionValue = input.dimensionValue;
-				var count = this._model.getCountForElement(dimensionName, dimensionValue);
+				var count = this._model(aspect).getCountForElement(dimensionName, dimensionValue);
 				var displayElement = label.querySelector('span.count');
 				displayElement.innerHTML = count;
 			}
@@ -372,9 +432,9 @@ function factory(leaflet) {
 			this._refocusOnMap();
 		},
 
-		_addMatrixItem: function (parentElement, dimensionName, dimensionValue) {
-			var selected = this._model.getSavedSelectionState(dimensionName, dimensionValue);
-			this._model.inputChanged(dimensionName, dimensionValue, selected);
+		_addMatrixItem: function (parentElement, dimensionName, dimensionValue, aspect) {
+			var selected = this._model(aspect).getSavedSelectionState(dimensionName, dimensionValue);
+			this._model(aspect).inputChanged(dimensionName, dimensionValue, selected);
 
 			var label = document.createElement('label');
 
@@ -386,7 +446,8 @@ function factory(leaflet) {
 			input.dimensionName = dimensionName;
 			input.dimensionValue = dimensionValue;
 
-			leaflet.DomEvent.on(input, 'click', this._onMatrixInputClick, this);
+			var clickListener = this._onMatrixInputClick(aspect);
+			leaflet.DomEvent.on(input, 'click', clickListener, this);
 
 			var displayString = dimensionValue;
 			if (this.options.dimensionValueLabels != null && this.options.dimensionValueLabels[dimensionName] != null && this.options.dimensionValueLabels[dimensionName][dimensionValue] != null) {
@@ -397,7 +458,7 @@ function factory(leaflet) {
 			var displayCount = document.createElement('span');
 			displayCount.classList.add('count');
 			var displayRight = document.createElement('span');
-			var count = this._model.getCountForElement(dimensionName, dimensionValue)
+			var count = this._model(aspect).getCountForElement(dimensionName, dimensionValue)
 			displayLeft.innerHTML = ' ' + displayString + ' (';
 			displayCount.innerHTML = count;
 			displayRight.innerHTML = ')';
@@ -411,7 +472,7 @@ function factory(leaflet) {
 
 			parentElement.appendChild(label);
 
-			this._matrixInputs.push(label);
+			this._matrixInputs(aspect).push(label);
 		},
 
 		//we have to override this to stop it finding our inputs and then struggling to find layers for them
