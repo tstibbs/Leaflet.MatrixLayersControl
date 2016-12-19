@@ -44,20 +44,22 @@ var matrixLayers = {
 		'Urban/Buildings': urbanBuildings,
 		'Riverside/Parks': riversideParks,
 		'Riverside/Buildings': riversideBuildings
-	},
-	'stations': {
-		'terminus;v': station_terminus_v,
-		'nonterminus;v': station_nonterminus_v,
-		'terminus': station_terminus_nonv,
-		'nonterminus': station_nonterminus_nonv
 	}
 };
 var options = {
 	//dimensionNames: ['Locality', 'Type'],
-	dimensionNames: {'aspect1': ['Locality', 'Type'], 'stations' : ['Stations']},
-	aspects: ['aspect1', 'stations'],
+	dimensionNames: {'aspect1': ['Locality', 'Type']},
+	aspects: ['aspect1'],
 	multiAspects: true
 };
 
 var control = L.control.matrixLayers(baseLayers, null, matrixLayers, options);
+
+control.addAspect('stations', {
+	'terminus;v': station_terminus_v,
+	'nonterminus;v': station_nonterminus_v,
+	'terminus': station_terminus_nonv,
+	'nonterminus': station_nonterminus_nonv
+}, ['Stations'])
+
 control.addTo(map);

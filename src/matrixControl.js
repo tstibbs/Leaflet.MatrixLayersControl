@@ -214,13 +214,8 @@ function factory(leaflet) {
 				this._matrixInputsByAspect = {};
 				for (var i = 0; i < this.options.aspects.length; i++) {
 					var aspect = this.options.aspects[i];
-					this._modelByAspect[aspect] = new MatrixLayersModel(this.options.dimensionNames[aspect]);
-					this._matrixInputsByAspect[aspect] = [];
-					this._overlaysByAspect[aspect] = [];
-					
-					for (layerName in matrixOverlays[aspect]) {
-						this._addMatrixOverlay(matrixOverlays[aspect][layerName], layerName, aspect);
-					}
+					var aspectOverlays = matrixOverlays[aspect];
+					this._addAspect(aspect, aspectOverlays);
 				}
 			} else {
 				this._matrixInputsByAspect = [];
@@ -230,6 +225,22 @@ function factory(leaflet) {
 				for (layerName in matrixOverlays) {
 					this._addMatrixOverlay(matrixOverlays[layerName], layerName);
 				}
+			}
+		},
+
+		addAspect: function(aspect, aspectOverlays, aspectDimensionNames) {
+			this.options.dimensionNames[aspect] = aspectDimensionNames;
+			this.options.aspects.push(aspect);
+			this._addAspect(aspect, aspectOverlays);
+		},
+		
+		_addAspect: function(aspect, aspectOverlays) {
+			this._modelByAspect[aspect] = new MatrixLayersModel(this.options.dimensionNames[aspect]);
+			this._matrixInputsByAspect[aspect] = [];
+			this._overlaysByAspect[aspect] = [];
+			
+			for (layerName in aspectOverlays) {
+				this._addMatrixOverlay(aspectOverlays[layerName], layerName, aspect);
 			}
 		},
 		
