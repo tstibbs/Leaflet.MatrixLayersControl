@@ -44,7 +44,7 @@ control.addAspect('aspect1', {
 	'Urban/Buildings': urbanBuildings,
 	'Riverside/Parks': riversideParks,
 	'Riverside/Buildings': riversideBuildings
-}, ['Locality', 'Type']);
+}, {dimensionNames: ['Locality', 'Type']});
 
 
 
@@ -66,7 +66,7 @@ control.addAspect('stations', {
 	'nonterminus;v': station_nonterminus_v,
 	'terminus': station_terminus_nonv,
 	'nonterminus': station_nonterminus_nonv
-}, ['Stations']);
+}, {dimensionNames: ['Stations']});
 
 
 

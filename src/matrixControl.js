@@ -207,36 +207,40 @@ function factory(leaflet) {
 	var matrixLayers = leaflet.Control.Layers.extend({
 
 		options: {
-			//only specify those for which we really need a default.
-			dimensionNames: {},
+			multiAspects: false,
 			aspects: [],
-			multiAspects: false
+			dimensionNames: {},
+			dimensionLabels: {},//{dimensionName1: 'Dimension Label 1'}
+			dimensionValueLabels: {},//{dimensionName1: {dimensionValue1: 'Dimension Value Label 1'}}
 		},
 
 		initialize: function (baseLayers, overlays, matrixOverlays, options) {
 			leaflet.Control.Layers.prototype.initialize.call(this, baseLayers, overlays, options);
 			this._overlaysByAspect = {};
-			if (this.options.multiAspects) {
-				this._modelByAspect = {};
-				this._matrixInputsByAspect = {};
+			this._modelByAspect = {};
+			this._matrixInputsByAspect = {};
+ 			if (this.options.multiAspects) {
 				for (var i = 0; i < this.options.aspects.length; i++) {
 					var aspect = this.options.aspects[i];
 					var aspectOverlays = matrixOverlays[aspect];
 					this._addAspect(aspect, aspectOverlays);
 				}
-			} else {
-				this._matrixInputsByAspect = [];
-				this._modelByAspect = new MatrixLayersModel(this.options.dimensionNames);
-				this._overlaysByAspect[undefined] = [];
-				
-				for (layerName in matrixOverlays) {
-					this._addMatrixOverlay(matrixOverlays[layerName], layerName);
-				}
-			}
+ 			} else {
+				var dummyAspect = 'single_aspect';
+				this.addAspect(aspect, matrixOverlays, options)
+ 			}
 		},
 
-		addAspect: function(aspect, aspectOverlays, aspectDimensionNames) {
-			this.options.dimensionNames[aspect] = aspectDimensionNames;
+		addAspect: function(aspect, aspectOverlays, options) {
+			if (options.dimensionNames) {
+				this.options.dimensionNames[aspect] = options.dimensionNames;
+			}
+			if (options.dimensionLabels) {
+				this.options.dimensionLabels[aspect] = options.dimensionLabels;
+			}
+			if (options.dimensionValueLabels) {
+				this.options.dimensionValueLabels[aspect] = options.dimensionValueLabels;
+			}
 			this.options.aspects.push(aspect);
 			this._addAspect(aspect, aspectOverlays);
 		},
@@ -252,35 +256,31 @@ function factory(leaflet) {
 		},
 		
 		_model: function (aspect) {
-			if (this.options.multiAspects) {
-				return this._modelByAspect[aspect];
-			} else {
-				return this._modelByAspect;
-			}
+			return this._modelByAspect[aspect];
 		},
 		
 		_matrixInputs: function (aspect) {
-			if (this.options.multiAspects) {
-				return this._matrixInputsByAspect[aspect];
-			} else {
-				return this._matrixInputsByAspect;
-			}
+			return this._matrixInputsByAspect[aspect];
 		},
 
 		onAdd: function (map) {
 			var container = leaflet.Control.Layers.prototype.onAdd.call(this, map);
-			if (this.options.multiAspects) {
-				for (var i = 0; i < this.options.aspects.length; i++) {
-					var aspect = this.options.aspects[i];
-					this._model(aspect).setMap(map);
-					this._updateSelectedLayers(aspect, undefined);
-				}
-			} else {
-				this._model().setMap(map);
-				this._updateSelectedLayers();
+			for (var i = 0; i < this.options.aspects.length; i++) {
+				var aspect = this.options.aspects[i];
+				this._model(aspect).setMap(map);
+				this._updateSelectedLayers(aspect, undefined);
 			}
-
 			return container;
+		},
+
+		_safeGet: function(map/*, keys*/) {
+			var keys = Array.prototype.slice.call(arguments, 1);
+			keys.forEach(function(key) {
+				if (map != null) {
+					map = map[key];
+				}
+			});
+			return map;
 		},
 
 		_update: function () {
@@ -294,7 +294,6 @@ function factory(leaflet) {
 			var baseLayersPresent = false;
 			var overlaysPresent = false;
 			
-			//TODO what happens if it's not multi aspect?
 			for (var a = 0; a < this.options.aspects.length; a++) {
 				var aspect = this.options.aspects[a];
 				
@@ -338,7 +337,7 @@ function factory(leaflet) {
 					
 					var dimensionDisplay = dimensionName;
 					if (this.options.dimensionLabels != null) {
-						var display = this.options.dimensionLabels[dimensionName];
+						var display = this._safeGet(this.options.dimensionLabels, aspect, dimensionName);
 						if (display != null) {
 							dimensionDisplay = display;
 						}
@@ -468,8 +467,11 @@ function factory(leaflet) {
 			leaflet.DomEvent.on(input, 'click', clickListener, this);
 
 			var displayString = dimensionValue;
-			if (this.options.dimensionValueLabels != null && this.options.dimensionValueLabels[dimensionName] != null && this.options.dimensionValueLabels[dimensionName][dimensionValue] != null) {
-				displayString = this.options.dimensionValueLabels[dimensionName][dimensionValue];
+			if (this.options.dimensionValueLabels != null) {
+				var possibleDisplayString = this._safeGet(this.options.dimensionValueLabels, aspect, dimensionName, dimensionValue);
+				if (possibleDisplayString != null) {
+					displayString = possibleDisplayString;
+				}
 			}
 			var display = document.createElement('span');
 			var displayLeft = document.createElement('span');
