@@ -288,11 +288,8 @@ function factory(leaflet) {
 				return;
 			}
 
-			this._baseLayersList.innerHTML = '';
-			this._overlaysList.innerHTML = '';
-
-			var baseLayersPresent = false;
-			var overlaysPresent = false;
+			leaflet.Control.Layers.prototype._update.call(this);
+			this._separator.style.display = ''; //this is a bit of an upgrade risk, but is probably preferable to pulling in the code from this method from the standard layers control
 			
 			for (var a = 0; a < this.options.aspects.length; a++) {
 				var aspect = this.options.aspects[a];
@@ -320,10 +317,6 @@ function factory(leaflet) {
 								allDimensions[j][part] = true;
 							}
 						}
-					} else {
-						this._addItem(obj);
-						overlaysPresent = overlaysPresent || obj.overlay;
-						baseLayersPresent = baseLayersPresent || !obj.overlay;
 					}
 				}
 

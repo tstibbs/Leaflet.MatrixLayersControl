@@ -11,7 +11,8 @@ var map = L.map('map', {
 });
 
 var baseLayers = {
-	"Streets": streets
+	"Streets1": streets,
+	"Streets2": streets
 };
 
 var options = {
