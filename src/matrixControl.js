@@ -205,17 +205,16 @@ function factory(leaflet) {
 	});
 	
 	var matrixLayers = leaflet.Control.Layers.extend({
-
-		options: {
-			multiAspects: false,
-			aspects: [],
-			dimensionNames: {},
-			dimensionLabels: {},//{dimensionName1: 'Dimension Label 1'}
-			dimensionValueLabels: {},//{dimensionName1: {dimensionValue1: 'Dimension Value Label 1'}}
-		},
-
 		initialize: function (baseLayers, overlays, matrixOverlays, options) {
 			leaflet.Control.Layers.prototype.initialize.call(this, baseLayers, overlays, options);
+			leaflet.Util.setOptions(this, {
+				multiAspects: false,
+				aspects: [],
+				dimensionNames: {},
+				dimensionLabels: {},//{dimensionName1: 'Dimension Label 1'}
+				dimensionValueLabels: {},//{dimensionName1: {dimensionValue1: 'Dimension Value Label 1'}}
+			});//workaround for the fact that you can't have mutable options as they persist between objects
+			leaflet.Util.setOptions(this, options);
 			this._overlaysByAspect = {};
 			this._modelByAspect = {};
 			this._matrixInputsByAspect = {};
