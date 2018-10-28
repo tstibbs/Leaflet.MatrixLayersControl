@@ -525,8 +525,37 @@ function factory(leaflet) {
 		
 		_checkDisabledLayers: function() {
 			//do nothing, we can't support this functionality for now
-		}
+		},
+		
+		_initLayout: function () {
+			if (!this.options.embeddable) {
+				leaflet.Control.Layers.prototype._initLayout.call(this);
+			} else {
+				var className = 'leaflet-control-layers';
 
+				var section = this._container = this._form = leaflet.DomUtil.create('section', className + '-list');
+
+				leaflet.DomEvent.disableClickPropagation(section);
+				leaflet.DomEvent.disableScrollPropagation(section);
+
+				this._baseLayersList = leaflet.DomUtil.create('div', className + '-base', section);
+				this._separator = leaflet.DomUtil.create('div', className + '-separator', section);
+				this._overlaysList = leaflet.DomUtil.create('div', className + '-overlays', section);
+			}
+		},
+		
+		addTo: function (map) {
+			if (!this.options.embeddable) {
+				leaflet.Control.Layers.prototype.addTo.call(this, map);
+			} else {
+				this.remove();
+				this._map = map;
+
+				this.onAdd(map);
+				
+				return this;
+			}
+		}
 	});
 
 	return matrixLayers;

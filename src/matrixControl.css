@@ -6,3 +6,7 @@ div.dimension-container {
 .disabled {
     color: lightgray;
 }
+
+.leaflet-control-layers-list label {
+    display: block;
+}
