@@ -20,5 +20,9 @@ The master branch is developed against leaflet 1.x. There is a 0.7.7 branch whic
 
 ## Examples
 [Simple](https://tstibbs.github.io/Leaflet.MatrixLayersControl/examples/simple.html)
+
 [Fullscreen](https://tstibbs.github.io/Leaflet.MatrixLayersControl/examples/fullscreen.html)
+
 [Links on dimensions names and values](https://tstibbs.github.io/Leaflet.MatrixLayersControl/examples/links.html)
+
+[Multiple aspects](https://tstibbs.github.io/Leaflet.MatrixLayersControl/examples/multi-aspect.html)

@@ -211,6 +211,7 @@ function factory(leaflet) {
 				multiAspects: false,
 				aspects: [],
 				dimensionNames: {},
+				aspectLabels: {},//{aspectName1: 'Aspect Label 1'}
 				dimensionLabels: {},//{dimensionName1: 'Dimension Label 1'}
 				dimensionValueLabels: {},//{dimensionName1: {dimensionValue1: 'Dimension Value Label 1'}}
 			});//workaround for the fact that you can't have mutable options as they persist between objects
@@ -239,6 +240,9 @@ function factory(leaflet) {
 			}
 			if (options.dimensionValueLabels) {
 				this.options.dimensionValueLabels[aspect] = options.dimensionValueLabels;
+			}
+			if (options.aspectLabel) {
+				this.options.aspectLabels[aspect] = options.aspectLabel;
 			}
 			this.options.aspects.push(aspect);
 			this._addAspect(aspect, aspectOverlays);
@@ -296,6 +300,19 @@ function factory(leaflet) {
 				var aspectElement = document.createElement('div');
 				aspectElement.className = 'aspect';
 				this._overlaysList.appendChild(aspectElement);
+				var aspectContainer = aspectElement;
+				
+				if (this.options.multiAspects) {
+					var aspectTitle = document.createElement('div');
+					aspectTitle.className = 'aspect-title';
+					var aspectTitleText = document.createElement('span');
+					var titleString = this.options.aspectLabels[aspect] || aspect;
+					aspectTitleText.innerHTML = titleString;
+					aspectTitle.appendChild(aspectTitleText);
+					aspectContainer = document.createElement('div');
+					aspectElement.appendChild(aspectTitle);
+					aspectElement.appendChild(aspectContainer);
+				}
 				
 				//get hold of all the dimension values
 				var allDimensions = [];
@@ -362,7 +379,7 @@ function factory(leaflet) {
 					})(parentElement, aspect);
 					parentElement.appendChild(dimensionEl);
 								
-					aspectElement.appendChild(parentElement);
+					aspectContainer.appendChild(parentElement);
 					Object.keys(dimension).forEach(function (dimensionValue) { 
 						this._addMatrixItem(parentElement, dimensionName, dimensionValue, aspect);
 					}, this);
@@ -541,6 +558,9 @@ function factory(leaflet) {
 				this._baseLayersList = leaflet.DomUtil.create('div', className + '-base', section);
 				this._separator = leaflet.DomUtil.create('div', className + '-separator', section);
 				this._overlaysList = leaflet.DomUtil.create('div', className + '-overlays', section);
+			}
+			if (this.options.multiAspects) {
+				leaflet.DomUtil.addClass(this._overlaysList, 'multi-aspect')
 			}
 		},
 		

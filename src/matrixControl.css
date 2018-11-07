@@ -1,6 +1,19 @@
+div.aspect {
+	padding-top: 10px;
+}
+
 div.dimension-container {
 	display: block;
-	padding-top: 10px;
+    padding-top: 3px;
+    padding-bottom: 3px;
+}
+
+.multi-aspect div.dimension-container {
+	padding-left: 8px;
+}
+
+.aspect-title {
+	font-weight: bold;
 }
 
 .disabled {
