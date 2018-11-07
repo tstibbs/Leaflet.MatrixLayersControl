@@ -23,3 +23,15 @@ div.dimension-container {
 .leaflet-control-layers-list label {
     display: block;
 }
+
+.aspect-arrow-up, .aspect-arrow-down {
+	padding-left: 3px;
+}
+
+.expanded .aspect-arrow-up, .collapsed .aspect-arrow-down, .expanded .aspect-container {
+	display: initial;
+}
+
+.expanded .aspect-arrow-down, .collapsed .aspect-arrow-up, .collapsed .aspect-container {
+	display: none;
+}

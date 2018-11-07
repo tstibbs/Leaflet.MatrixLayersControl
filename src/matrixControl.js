@@ -303,15 +303,29 @@ function factory(leaflet) {
 				var aspectContainer = aspectElement;
 				
 				if (this.options.multiAspects) {
-					var aspectTitle = document.createElement('div');
-					aspectTitle.className = 'aspect-title';
-					var aspectTitleText = document.createElement('span');
+					leaflet.DomUtil.addClass(aspectElement, 'expanded');
+					var aspectTitle = leaflet.DomUtil.create('div', 'aspect-title', aspectElement);
+					var aspectTitleText = leaflet.DomUtil.create('span', null, aspectTitle);
 					var titleString = this.options.aspectLabels[aspect] || aspect;
 					aspectTitleText.innerHTML = titleString;
-					aspectTitle.appendChild(aspectTitleText);
-					aspectContainer = document.createElement('div');
-					aspectElement.appendChild(aspectTitle);
-					aspectElement.appendChild(aspectContainer);
+					var upArrow = leaflet.DomUtil.create('i', 'fa fa-caret-up aspect-arrow-up', aspectTitle);
+					var downArrow = leaflet.DomUtil.create('i', 'fa fa-caret-down aspect-arrow-down', aspectTitle);
+					upArrow.setAttribute('aria-hidden', 'true');
+					downArrow.setAttribute('aria-hidden', 'true');
+					var expandCollapse = function(aspectElement){
+						return function() {
+							if (leaflet.DomUtil.hasClass(aspectElement, 'expanded')) {
+								leaflet.DomUtil.removeClass(aspectElement, 'expanded');
+								leaflet.DomUtil.addClass(aspectElement, 'collapsed');
+							} else {
+								leaflet.DomUtil.removeClass(aspectElement, 'collapsed');
+								leaflet.DomUtil.addClass(aspectElement, 'expanded');
+							}
+						};
+					}(aspectElement);//scoping
+					leaflet.DomEvent.on(upArrow, 'click', expandCollapse, this);
+					leaflet.DomEvent.on(downArrow, 'click', expandCollapse, this);
+					aspectContainer = leaflet.DomUtil.create('div', 'aspect-container', aspectElement);
 				}
 				
 				//get hold of all the dimension values
