@@ -78,5 +78,23 @@ control.addAspect('stations', {
 
 
 
+control.addLazyAspect('Other', {}, {
+	description: 'This data will be lazy-loaded.',
+	callback: function() {
+		setTimeout(function() {
+			var lazyAdded = new L.LayerGroup();
+			L.marker([51.503994, -0.128253]).addTo(lazyAdded);
+			control.addAspect('Other', {
+				'lazyAdded': lazyAdded
+			}, {
+				dimensionNames: ['Lazy Loaded']
+			});
+		}, 5000);
+	}
+});
+
+
+
+
 // finally add control to map
 control.addTo(map);

@@ -35,3 +35,8 @@ div.dimension-container {
 .expanded .aspect-arrow-down, .collapsed .aspect-arrow-up, .collapsed .aspect-container {
 	display: none;
 }
+
+.spin-container {
+    padding-left: 5px;
+    display: inline-block;
+}

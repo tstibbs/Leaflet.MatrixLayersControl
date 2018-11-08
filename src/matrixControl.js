@@ -219,6 +219,7 @@ function factory(leaflet) {
 			this._overlaysByAspect = {};
 			this._modelByAspect = {};
 			this._matrixInputsByAspect = {};
+			this._lazyAspects = {};
  			if (this.options.multiAspects) {
 				for (var i = 0; i < this.options.aspects.length; i++) {
 					var aspect = this.options.aspects[i];
@@ -230,8 +231,8 @@ function factory(leaflet) {
 				this.addAspect(aspect, matrixOverlays, options)
  			}
 		},
-
-		addAspect: function(aspect, aspectOverlays, options) {
+		
+		_addAspectDetails: function(aspect, options) {
 			if (options.dimensionNames) {
 				this.options.dimensionNames[aspect] = options.dimensionNames;
 			}
@@ -244,17 +245,34 @@ function factory(leaflet) {
 			if (options.aspectLabel) {
 				this.options.aspectLabels[aspect] = options.aspectLabel;
 			}
+		},
+
+		addLazyAspect: function(aspect, options, meta) {//meta must include 'callback'
+			this._addAspectDetails(aspect, options);
+			if (meta.callback == null) {
+				throw new Error("Lazy aspect meta's must include a 'callback' function.");
+			}
+			this._lazyAspects[aspect] = meta;
+		},
+
+		addAspect: function(aspect, aspectOverlays, options) {
+			this._addAspectDetails(aspect, options);
 			this.options.aspects.push(aspect);
 			this._addAspect(aspect, aspectOverlays);
 		},
 		
 		_addAspect: function(aspect, aspectOverlays) {
+			delete this._lazyAspects[aspect];
 			this._modelByAspect[aspect] = new MatrixLayersModel(this.options.dimensionNames[aspect]);
 			this._matrixInputsByAspect[aspect] = [];
 			this._overlaysByAspect[aspect] = [];
 			
 			for (layerName in aspectOverlays) {
 				this._addMatrixOverlay(aspectOverlays[layerName], layerName, aspect);
+			}
+			
+			if (this._map) {
+				this._update();
 			}
 		},
 		
@@ -286,6 +304,44 @@ function factory(leaflet) {
 			return map;
 		},
 
+		_drawAspect: function(aspect) {
+			var aspectElement = document.createElement('div');
+			aspectElement.className = 'aspect';
+			this._overlaysList.appendChild(aspectElement);
+			var aspectContainer = aspectElement;
+			
+			if (this.options.multiAspects) {
+				leaflet.DomUtil.addClass(aspectElement, 'expanded');
+				var aspectTitle = leaflet.DomUtil.create('div', 'aspect-title', aspectElement);
+				var aspectTitleText = leaflet.DomUtil.create('span', null, aspectTitle);
+				var titleString = this.options.aspectLabels[aspect] || aspect;
+				aspectTitleText.innerHTML = titleString;
+				var upArrow = leaflet.DomUtil.create('i', 'fa fa-caret-up aspect-arrow-up', aspectTitle);
+				var downArrow = leaflet.DomUtil.create('i', 'fa fa-caret-down aspect-arrow-down', aspectTitle);
+				upArrow.setAttribute('aria-hidden', 'true');
+				downArrow.setAttribute('aria-hidden', 'true');
+				var expandCollapse = function(aspectElement){
+					return function() {
+						if (leaflet.DomUtil.hasClass(aspectElement, 'expanded')) {
+							leaflet.DomUtil.removeClass(aspectElement, 'expanded');
+							leaflet.DomUtil.addClass(aspectElement, 'collapsed');
+						} else {
+							leaflet.DomUtil.removeClass(aspectElement, 'collapsed');
+							leaflet.DomUtil.addClass(aspectElement, 'expanded');
+						}
+					};
+				}(aspectElement);//scoping
+				leaflet.DomEvent.on(upArrow, 'click', expandCollapse, this);
+				leaflet.DomEvent.on(downArrow, 'click', expandCollapse, this);
+				aspectContainer = leaflet.DomUtil.create('div', 'aspect-container', aspectElement);
+			}
+			
+			return {
+				aspectContainer: aspectContainer,
+				aspectTitle: aspectTitle
+			};
+		},
+		
 		_update: function () {
 			if (!this._container) {
 				return;
@@ -296,38 +352,8 @@ function factory(leaflet) {
 			
 			for (var a = 0; a < this.options.aspects.length; a++) {
 				var aspect = this.options.aspects[a];
-				
-				var aspectElement = document.createElement('div');
-				aspectElement.className = 'aspect';
-				this._overlaysList.appendChild(aspectElement);
-				var aspectContainer = aspectElement;
-				
-				if (this.options.multiAspects) {
-					leaflet.DomUtil.addClass(aspectElement, 'expanded');
-					var aspectTitle = leaflet.DomUtil.create('div', 'aspect-title', aspectElement);
-					var aspectTitleText = leaflet.DomUtil.create('span', null, aspectTitle);
-					var titleString = this.options.aspectLabels[aspect] || aspect;
-					aspectTitleText.innerHTML = titleString;
-					var upArrow = leaflet.DomUtil.create('i', 'fa fa-caret-up aspect-arrow-up', aspectTitle);
-					var downArrow = leaflet.DomUtil.create('i', 'fa fa-caret-down aspect-arrow-down', aspectTitle);
-					upArrow.setAttribute('aria-hidden', 'true');
-					downArrow.setAttribute('aria-hidden', 'true');
-					var expandCollapse = function(aspectElement){
-						return function() {
-							if (leaflet.DomUtil.hasClass(aspectElement, 'expanded')) {
-								leaflet.DomUtil.removeClass(aspectElement, 'expanded');
-								leaflet.DomUtil.addClass(aspectElement, 'collapsed');
-							} else {
-								leaflet.DomUtil.removeClass(aspectElement, 'collapsed');
-								leaflet.DomUtil.addClass(aspectElement, 'expanded');
-							}
-						};
-					}(aspectElement);//scoping
-					leaflet.DomEvent.on(upArrow, 'click', expandCollapse, this);
-					leaflet.DomEvent.on(downArrow, 'click', expandCollapse, this);
-					aspectContainer = leaflet.DomUtil.create('div', 'aspect-container', aspectElement);
-				}
-				
+				var aspectContainers = this._drawAspect(aspect);
+
 				//get hold of all the dimension values
 				var allDimensions = [];
 				for (var i = 0; i < this._overlaysByAspect[aspect].length; i++) {
@@ -393,14 +419,31 @@ function factory(leaflet) {
 					})(parentElement, aspect);
 					parentElement.appendChild(dimensionEl);
 								
-					aspectContainer.appendChild(parentElement);
+					aspectContainers.aspectContainer.appendChild(parentElement);
 					Object.keys(dimension).forEach(function (dimensionValue) { 
 						this._addMatrixItem(parentElement, dimensionName, dimensionValue, aspect);
 					}, this);
 				}
-				
 			}
-
+			
+			for (aspect in this._lazyAspects) {
+				var aspectContainers = this._drawAspect(aspect);
+				var aspectMeta = this._lazyAspects[aspect];
+				var descriptionContainer = leaflet.DomUtil.create('div', 'dimension-container', aspectContainers.aspectContainer);
+				var description = leaflet.DomUtil.create('div', '', descriptionContainer);
+				description.innerHTML = aspectMeta.description;
+				var loader = leaflet.DomUtil.create('a', '', descriptionContainer);
+				loader.setAttribute('href', '#');
+				loader.innerHTML = 'Load...'
+				loader.onclick = (function(loader, aspectTitle, callback) {
+					return function() {
+						var spinContainer = leaflet.DomUtil.create('div', 'spin-container', aspectTitle);
+						leaflet.DomUtil.create('i', 'lazy-spinner fa fa-spinner fa-spin', spinContainer);
+						callback();
+						return false;
+					}.bind(this)
+				}).bind(this)(loader, aspectContainers.aspectTitle, aspectMeta.callback);//scoping
+			}
 		},
 
 		_addMatrixOverlay: function (layer, name, aspect) {
