@@ -314,7 +314,21 @@ function factory(leaflet) {
 				leaflet.DomUtil.addClass(aspectElement, 'expanded');
 				var aspectTitle = leaflet.DomUtil.create('div', 'aspect-title', aspectElement);
 				var aspectTitleText = leaflet.DomUtil.create('span', null, aspectTitle);
-				var titleString = this.options.aspectLabels[aspect] || aspect;
+				var titleString = this.options.aspectLabels[aspect];
+				//if there is only one dimension, and it has a label, use that as the aspect label
+				if (titleString == null) {
+					var aspectLabels = this.options.dimensionLabels[aspect];
+					if (aspectLabels != null) {
+						var dimensionKeys = Object.keys(aspectLabels);
+						if (dimensionKeys.length == 1) {
+							titleString = this.options.dimensionLabels[aspect][dimensionKeys[0]];
+						}
+					}
+				}
+				//if no labels at all, just use the aspect name
+				if (titleString == null) {
+					titleString = aspect
+				}
 				aspectTitleText.innerHTML = titleString;
 				var upArrow = leaflet.DomUtil.create('i', 'fa fa-caret-up aspect-arrow-up', aspectTitle);
 				var downArrow = leaflet.DomUtil.create('i', 'fa fa-caret-down aspect-arrow-down', aspectTitle);
@@ -385,7 +399,9 @@ function factory(leaflet) {
 					parentElement.dimensionName = dimensionName;
 					
 					var dimensionDisplay = dimensionName;
-					if (this.options.dimensionLabels != null) {
+					if (allDimensions.length == 1) {
+						dimensionDisplay = '';//only one dimension, so don't show the label (because it will duplicate the aspect label)
+					} else if (this.options.dimensionLabels != null) {
 						var display = this._safeGet(this.options.dimensionLabels, aspect, dimensionName);
 						if (display != null) {
 							dimensionDisplay = display;
