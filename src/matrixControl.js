@@ -259,6 +259,7 @@ function factory(leaflet) {
 			this._addAspectDetails(aspect, options);
 			this.options.aspects.push(aspect);
 			this._addAspect(aspect, aspectOverlays);
+			this._updateLayerClick(aspect);
 		},
 		
 		_addAspect: function(aspect, aspectOverlays) {
