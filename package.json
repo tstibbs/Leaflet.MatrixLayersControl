@@ -1,0 +1,5 @@
+{
+    "name": "leaflet-matrix-layers-control",
+    "version": "0.0.1",
+    "main": "src/matrixControl.js"
+}
