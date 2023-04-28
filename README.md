@@ -1,3 +1,6 @@
+[![License: AL2](https://img.shields.io/github/license/tstibbs/Leaflet.MatrixLayersControl)](LICENSE)
+[![GitHub issues](https://img.shields.io/github/issues/tstibbs/Leaflet.MatrixLayersControl.svg)](https://github.com/tstibbs/Leaflet.MatrixLayersControl/issues)
+
 ## What is this?
 It's like the [leaflet layers control](http://leafletjs.com/examples/layers-control.html) except that you can specify a multi-dimensional matrix of layers. This essentially means you can group layers by more than one aspect.
 
