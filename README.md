@@ -26,3 +26,7 @@ The master branch is developed against leaflet 1.x. There is a 0.7.7 branch whic
 [Links on dimensions names and values](https://tstibbs.github.io/Leaflet.MatrixLayersControl/examples/links.html)
 
 [Multiple aspects](https://tstibbs.github.io/Leaflet.MatrixLayersControl/examples/multi-aspect.html)
+
+## Contributing
+
+PRs are very welcome, but for any big changes or new features please open an issue to discuss first.
