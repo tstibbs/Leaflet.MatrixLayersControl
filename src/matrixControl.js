@@ -441,7 +441,7 @@ function factory(leaflet) {
 					parentElement.appendChild(dimensionEl);
 								
 					aspectContainers.aspectContainer.appendChild(parentElement);
-					Object.keys(dimension).forEach(function (dimensionValue) { 
+					Object.keys(dimension).sort().forEach(function (dimensionValue) { 
 						this._addMatrixItem(parentElement, dimensionName, dimensionValue, aspect);
 					}, this);
 				}
